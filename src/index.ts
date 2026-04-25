@@ -8,6 +8,7 @@ import { startServer } from './server.js';
 // ──────────────────────────────────────────────
 
 function validateEnv(): void {
+  if (process.env['USE_MOCK_DATA'] === 'true') return;
   const required = ['CANVAS_BASE_URL', 'CANVAS_API_TOKEN'];
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
@@ -22,6 +23,10 @@ function validateEnv(): void {
 // ──────────────────────────────────────────────
 
 async function pingCanvas(): Promise<void> {
+  if (process.env['USE_MOCK_DATA'] === 'true') {
+    logger.info('Mock mode enabled — using sample Canvas data (no API key required)');
+    return;
+  }
   try {
     await canvasClient.get('/users/self');
     logger.info('Canvas API connection verified');
@@ -39,11 +44,6 @@ async function pingCanvas(): Promise<void> {
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 
-if (process.env['USE_MOCK_DATA'] === 'true') {
-  logger.info('Mock mode enabled — using sample Canvas data (no API key required)');
-} else {
-  validateEnv();
-  await pingCanvas();
-}
-
+validateEnv();
+await pingCanvas();
 startServer(PORT);
