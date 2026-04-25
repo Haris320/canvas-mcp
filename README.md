@@ -4,6 +4,8 @@
 
 Canvas MCP is an open-source [Model Context Protocol](https://modelcontextprotocol.io) server that connects Claude to Canvas LMS. Students can ask Claude about their courses, track deadlines, review professor feedback, and plan their academic week — powered by live Canvas data.
 
+[Claude Chat Link](https://claude.ai/share/83f9da15-d08c-4d82-a38b-542e532339dd)
+
 <img width="1003" height="1199" alt="image" src="https://github.com/user-attachments/assets/e94edec4-c035-43fe-8d36-aef61ee5abad" />
 
 
