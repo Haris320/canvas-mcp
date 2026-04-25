@@ -78,10 +78,24 @@ function formatErrorForClaude(error: unknown): string {
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
+function setCorsHeaders(res: ServerResponse): void {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id, Authorization');
+  res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id');
+}
+
 async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse
 ): Promise<void> {
+  setCorsHeaders(res);
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204).end();
+    return;
+  }
+
   if (req.url !== '/mcp') {
     res.writeHead(404).end('Not found');
     return;
