@@ -25,18 +25,21 @@ Ask Claude things like:
 | `get_assignments` | Due dates, submission status, per-course filtering |
 | `get_grades` | Current scores, submission feedback, grade breakdowns |
 | `get_announcements` | Unread course announcements and discussion posts |
-| `get_feedback` | Professor comments, rubric scores, submission history |
-| `get_calendar` | Deadlines, exam dates, and course events in one feed |
+| `get_discussions` | Course discussion topics and posts |
+| `get_submissions` | Submission details for a specific assignment |
+| `get_syllabus` | Course syllabus as plain text |
+| `get_files` | Files uploaded to a course |
+| `get_calendar_events` | Deadlines, exam dates, and course events in one feed |
 
 ---
 
 ## Getting started
 
-### 1. Get your Canvas API token
+### 1. Install dependencies
 
-1. Log into your Canvas account
-2. Go to **Account → Settings → Approved Integrations**
-3. Click **New Access Token** and copy the token
+```bash
+npm install
+```
 
 ### 2. Configure environment
 
@@ -44,42 +47,65 @@ Ask Claude things like:
 cp .env.example .env
 ```
 
-Edit `.env`:
+**Option A — Mock mode (no Canvas account needed):**
+
+Set `USE_MOCK_DATA=true` in your `.env`. The server will use built-in sample data for a fictional student so you can explore all tools immediately.
 
 ```env
+USE_MOCK_DATA=true
+PORT=3000
+```
+
+**Option B — Real Canvas data:**
+
+Get your API token from Canvas: **Account → Settings → Approved Integrations → New Access Token**
+
+```env
+USE_MOCK_DATA=false
 CANVAS_BASE_URL=https://youruni.instructure.com
 CANVAS_API_TOKEN=your_token_here
 PORT=3000
 ```
 
-### 3. Install and run
+> Note: Some institutions disable student token generation. If you see "Your Canvas administrators have chosen to limit your ability to generate your own access token", use mock mode or contact your admin.
+
+### 3. Start the server
 
 ```bash
-npm install
 npm run dev
 ```
 
-The server starts on `http://localhost:3000/sse`.
+The MCP endpoint is available at `http://localhost:3000/mcp`.
 
 ### 4. Connect to Claude
 
-Add the server URL to Claude's MCP settings:
+**Claude Code (CLI) — no HTTPS required:**
 
+```bash
+claude mcp add --transport http canvas-mcp http://localhost:3000/mcp
 ```
-http://localhost:3000/sse
+
+**Claude.ai (web) — requires a public HTTPS URL:**
+
+Install and run [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/) to create a free tunnel:
+
+```bash
+# Windows
+winget install Cloudflare.cloudflared
+
+# Run the tunnel (in a separate terminal while the server is running)
+cloudflared tunnel --url http://localhost:3000
 ```
 
----
+Cloudflared will print a URL like `https://something.trycloudflare.com`. Go to **Claude.ai → Settings → Integrations → Add custom connector** and paste `https://something.trycloudflare.com/mcp`.
 
-## Multi-institution support
-
-Each user can configure their own institution's Canvas URL (e.g. `mit.instructure.com`, `canvas.stanford.edu`). Tokens are passed per-request and never stored server-side.
+> The tunnel URL changes every time you restart cloudflared.
 
 ---
 
 ## Self-hosting
 
-Deploy for free on [Railway](https://railway.app), [Fly.io](https://fly.io), or [Vercel](https://vercel.com) — all have tiers accessible for students.
+Deploy for free on [Railway](https://railway.app), [Fly.io](https://fly.io), or [Vercel](https://vercel.com) to get a permanent HTTPS URL for Claude.ai.
 
 ---
 
