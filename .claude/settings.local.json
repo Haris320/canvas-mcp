@@ -1,13 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "mcp__ebdb7bf9-fe66-4978-a2da-2e4088bee59c__resolve-library-id",
-      "mcp__ebdb7bf9-fe66-4978-a2da-2e4088bee59c__query-docs",
       "Bash(gh auth *)",
-      "PowerShell(gh auth status 2>&1)",
-      "mcp__mcp-registry__list_connectors",
-      "WebSearch",
-      "WebFetch(domain:github.com)"
+      "Bash(gh repo *)",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status 2>&1)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(git push *)"
     ]
   }
 }
