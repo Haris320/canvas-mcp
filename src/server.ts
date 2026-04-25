@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { InitializeRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { tools } from './tools/index.js';
 import { logger } from './utils/logger.js';
 import {
@@ -12,37 +12,6 @@ import {
   CanvasRateLimitError,
   CanvasApiError,
 } from './canvas/errors.js';
-
-// ──────────────────────────────────────────────
-// MCP server instance
-// ──────────────────────────────────────────────
-
-const mcpServer = new McpServer({
-  name: 'canvas-mcp',
-  version: '1.0.0',
-});
-
-// Register each tool via the v2 registerTool API
-for (const { definition, handler } of tools) {
-  mcpServer.registerTool(
-    definition.name,
-    {
-      description: definition.description,
-      inputSchema: definition.inputSchema,
-    },
-    async (input: Record<string, unknown>) => {
-      try {
-        const result = await handler(input);
-        return { content: [{ type: 'text' as const, text: result }] };
-      } catch (error) {
-        return {
-          content: [{ type: 'text' as const, text: formatErrorForClaude(error) }],
-          isError: true,
-        };
-      }
-    }
-  );
-}
 
 // ──────────────────────────────────────────────
 // Error formatting — never expose stack traces to Claude
@@ -64,7 +33,6 @@ function formatErrorForClaude(error: unknown): string {
   if (error instanceof CanvasApiError) {
     return `Canvas returned an error (${error.status}). This is usually a temporary issue — try again in a moment.`;
   }
-  // Log real error server-side; return safe message to Claude
   logger.error('Unhandled error in tool handler', {
     error: error instanceof Error ? error.message : String(error),
   });
@@ -72,8 +40,38 @@ function formatErrorForClaude(error: unknown): string {
 }
 
 // ──────────────────────────────────────────────
+// Factory — creates a fresh McpServer per session
+// registerTool expects a ZodRawShape, not a ZodObject
+// ──────────────────────────────────────────────
+
+function createMcpServer(): McpServer {
+  const server = new McpServer({ name: 'canvas-mcp', version: '1.0.0' });
+
+  for (const { definition, handler } of tools) {
+    const shape = (definition.inputSchema as z.ZodObject<z.ZodRawShape>).shape;
+
+    server.registerTool(
+      definition.name,
+      { description: definition.description, inputSchema: shape },
+      async (input) => {
+        try {
+          const result = await handler(input);
+          return { content: [{ type: 'text' as const, text: result }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text' as const, text: formatErrorForClaude(error) }],
+            isError: true,
+          };
+        }
+      }
+    );
+  }
+
+  return server;
+}
+
+// ──────────────────────────────────────────────
 // HTTP server with Streamable HTTP transport
-// Sessions are tracked by Mcp-Session-Id header
 // ──────────────────────────────────────────────
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
@@ -106,7 +104,6 @@ async function handleRequest(
     return;
   }
 
-  // Read request body
   const body = await new Promise<string>((resolve, reject) => {
     let data = '';
     req.on('data', (chunk: Buffer) => { data += chunk.toString(); });
@@ -122,17 +119,15 @@ async function handleRequest(
     return;
   }
 
-  const sessionId = req.headers['mcp-session-id'];
-  const existingSessionId = Array.isArray(sessionId) ? sessionId[0] : sessionId;
+  const sessionHeader = req.headers['mcp-session-id'];
+  const existingSessionId = Array.isArray(sessionHeader) ? sessionHeader[0] : sessionHeader;
 
   if (existingSessionId && transports.has(existingSessionId)) {
-    // Reuse existing session transport
     const transport = transports.get(existingSessionId)!;
     await transport.handleRequest(req, res, parsed);
     return;
   }
 
-  // New session — must be an initialize request
   const isInit = InitializeRequestSchema.safeParse(parsed).success;
   if (!isInit) {
     res.writeHead(400).end('Expected initialize request for new session');
@@ -153,6 +148,7 @@ async function handleRequest(
     logger.info('MCP session closed', { sessionId: newSessionId });
   };
 
+  const mcpServer = createMcpServer();
   await mcpServer.connect(transport);
   await transport.handleRequest(req, res, parsed);
 }
