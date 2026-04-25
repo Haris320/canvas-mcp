@@ -1,4 +1,3 @@
-import type { AxiosResponse } from 'axios';
 import { canvasClient } from './client.js';
 
 // Canvas Link header format: <url>; rel="current", <url>; rel="next", <url>; rel="last"
@@ -21,7 +20,7 @@ export async function fetchAllPages<T>(
   let nextUrl: string | null = url;
 
   while (nextUrl) {
-    const response: AxiosResponse<T[]> = await canvasClient.get<T[]>(nextUrl, {
+    const response: { data: T[]; headers: Record<string, string | undefined> } = await canvasClient.get<T[]>(nextUrl, {
       // Only send params on the first request; subsequent URLs already embed them
       params: nextUrl === url ? params : {},
     });

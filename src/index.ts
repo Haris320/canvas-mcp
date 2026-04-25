@@ -39,6 +39,11 @@ async function pingCanvas(): Promise<void> {
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 
-validateEnv();
-await pingCanvas();
+if (process.env['USE_MOCK_DATA'] === 'true') {
+  logger.info('Mock mode enabled — using sample Canvas data (no API key required)');
+} else {
+  validateEnv();
+  await pingCanvas();
+}
+
 startServer(PORT);
