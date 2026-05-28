@@ -46,6 +46,7 @@ Ask Claude things like:
 npm install
 ```
 
+
 ### 2. Configure environment
 
 ```bash
